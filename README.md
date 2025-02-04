@@ -46,3 +46,15 @@ MIT
  0. Uninstall Cursor
  1. Install Cursor
 
+## 感谢 linuxDo 这个开源社区(一个真正的技术社区)
+https://linux.do/
+
+
+
+## 请我喝杯茶
+<img src="./screen/28613e3f3f23a935b66a7ba31ff4e3f.jpg" width="300"/> <img src="./screen/mm_facetoface_collect_qrcode_1738583247120.png" width="300"/>
+
+## 关注公众号，随时获取仓库更新动态
+
+![image](./screen/qrcode_for_gh_c985615b5f2b_258.jpg)
+
