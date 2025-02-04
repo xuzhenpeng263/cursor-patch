@@ -46,5 +46,3 @@ MIT
  0. Uninstall Cursor
  1. Install Cursor
 
-
-https://linux.do/t/topic/274172
