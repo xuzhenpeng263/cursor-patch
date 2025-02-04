@@ -127,6 +127,8 @@ async function patchCursorGetMachineId() {
         modifyMainJs(mainPath);
 
         vscode.window.showInformationMessage('Cursor 补丁应用成功！');
+
+        vscode.window.showInformationMessage('github: https://github.com/chengazhen/cursor-patch');
     } catch (error) {
         vscode.window.showErrorMessage(`错误: ${error.message}`);
         throw error;
