@@ -2,8 +2,8 @@
     "name": "cursor-patch",
     "displayName": "Cursor Patch",
     "publisher": "cursor-patch",
-    "description": "A VS Code extension to patch Cursor editor",
-    "version": "0.0.4",
+    "description": "一个用于修补 Cursor 编辑器的 VSCode 扩展",
+    "version": "0.0.5",
     "engines": {
         "vscode": "^1.93.0"
     },
@@ -25,14 +25,22 @@
                     "type": "string",
                     "default": "",
                     "description": "自定义 machineId。留空则随机生成。"
+                },
+                "cursor-patch.mainJsPath": {
+                    "type": "string",
+                    "default": "",
+                    "description": "自定义 main.js 文件路径"
                 }
             }
         },
         "commands": [
             {
                 "command": "cursor-patch.patch",
-                "title": "Cursor: Patch Machine ID",
-                "category": "Cursor"
+                "title": "应用 Cursor 补丁"
+            },
+            {
+                "command": "cursor-patch.restore",
+                "title": "恢复 Cursor 备份"
             }
         ]
     },

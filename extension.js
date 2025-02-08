@@ -81,12 +81,12 @@ function checkVersion(version, minVersion = '', maxVersion = '') {
 }
 
 // 修改 main.js 文件
-function modifyMainJs(mainPath) {
+async function modifyMainJs(mainPath) {
     try {
         let content = fs.readFileSync(mainPath, 'utf8');
         
-        // 备份原文件
-        fs.writeFileSync(`${mainPath}.old`, content);
+        // 使用新的备份功能
+        await backupFile(mainPath);
 
         // 执行替换
         const patterns = {
@@ -96,8 +96,17 @@ function modifyMainJs(mainPath) {
                 (match, p1) => `async getMacMachineId(){return ${p1}}`
         };
 
+        let modified = false;
         for (const [pattern, replacement] of Object.entries(patterns)) {
-            content = content.replace(new RegExp(pattern), replacement);
+            const newContent = content.replace(new RegExp(pattern), replacement);
+            if (newContent !== content) {
+                content = newContent;
+                modified = true;
+            }
+        }
+
+        if (!modified) {
+            throw new Error('未找到需要修改的代码，可能文件已被修改或版本不兼容');
         }
 
         fs.writeFileSync(mainPath, content);
@@ -110,42 +119,132 @@ function modifyMainJs(mainPath) {
 // 主函数
 async function patchCursorGetMachineId() {
     try {
+        // 获取用户确认
+        const userConfirm = await confirmPatch();
+        if (userConfirm !== '继续') {
+            vscode.window.showInformationMessage('操作已取消');
+            return;
+        }
+
+        // 获取配置
+        const config = getConfig();
+        const customPath = config.get('mainJsPath');
+        
         // 获取路径
-        const { packagePath, mainPath } = getCursorPaths();
+        const { packagePath, mainPath } = customPath ? 
+            { packagePath: path.join(path.dirname(customPath), '..', 'package.json'), mainPath: customPath } :
+            getCursorPaths();
 
-        // 检查系统要求
-        checkSystemRequirements(packagePath, mainPath);
+        // 显示进度
+        await vscode.window.withProgress({
+            location: vscode.ProgressLocation.Notification,
+            title: "正在应用补丁...",
+            cancellable: false
+        }, async (progress) => {
+            progress.report({ increment: 0, message: "检查系统要求..." });
+            await checkSystemRequirements(packagePath, mainPath);
 
-        // 读取版本号
-        const packageJson = JSON.parse(fs.readFileSync(packagePath, 'utf8'));
-        const version = packageJson.version;
+            progress.report({ increment: 30, message: "检查版本兼容性..." });
+            const packageJson = JSON.parse(fs.readFileSync(packagePath, 'utf8'));
+            const version = packageJson.version;
+            await checkVersion(version, '0.45.0');
 
-        // 检查版本
-        checkVersion(version, '0.45.0');
+            progress.report({ increment: 30, message: "修改文件..." });
+            await modifyMainJs(mainPath);
 
-        // 修改文件
-        modifyMainJs(mainPath);
+            progress.report({ increment: 40, message: "完成..." });
+        });
 
-        vscode.window.showInformationMessage('Cursor 补丁应用成功！');
+        // 成功提示
+        const result = await vscode.window.showInformationMessage(
+            'Cursor 补丁应用成功！需要重启 Cursor 才能生效。',
+            '立即重启',
+            '稍后重启'
+        );
 
+        if (result === '立即重启') {
+            vscode.commands.executeCommand('workbench.action.reloadWindow');
+        }
+
+        // 显示项目信息
         vscode.window.showInformationMessage('github: https://github.com/chengazhen/cursor-patch');
     } catch (error) {
-        vscode.window.showErrorMessage(`错误: ${error.message}`);
-        throw error;
+        // 错误处理增强
+        const errorMessage = `错误: ${error.message}`;
+        console.error(errorMessage);
+        
+        const action = await vscode.window.showErrorMessage(
+            errorMessage,
+            '查看详情',
+            '重试',
+            '取消'
+        );
+
+        if (action === '重试') {
+            return patchCursorGetMachineId();
+        } else if (action === '查看详情') {
+            // 创建输出通道显示详细错误信息
+            const channel = vscode.window.createOutputChannel('Cursor Patch');
+            channel.appendLine('详细错误信息:');
+            channel.appendLine(error.stack || error.message);
+            channel.show();
+        }
     }
+}
+
+// 添加配置支持
+function getConfig() {
+    return vscode.workspace.getConfiguration('cursor-patch');
+}
+
+// 添加备份功能
+async function backupFile(filePath) {
+    try {
+        await fs.writeFileSync(`${filePath}.backup`, fs.readFileSync(filePath));
+        return true;
+    } catch (error) {
+        throw new Error(`备份失败: ${error.message}`);
+    }
+}
+
+// 添加更详细的用户交互
+async function confirmPatch() {
+    return vscode.window.showWarningMessage(
+        '即将修补 Cursor 的机器码获取逻辑',
+        {
+            modal: true,
+            detail: '此操作将修改 main.js 文件，建议先备份\n确认继续吗？'
+        },
+        '继续',
+        '取消'
+    );
 }
 
 // 注册命令
 function activate(context) {
-    let disposable = vscode.commands.registerCommand('cursor-patch.patch', async () => {
+    // 注册主命令
+    let patchCommand = vscode.commands.registerCommand('cursor-patch.patch', async () => {
+        await patchCursorGetMachineId();
+    });
+
+    // 注册恢复备份命令
+    let restoreCommand = vscode.commands.registerCommand('cursor-patch.restore', async () => {
         try {
-            await patchCursorGetMachineId();
+            const { mainPath } = getCursorPaths();
+            const backupPath = `${mainPath}.backup`;
+            
+            if (!fs.existsSync(backupPath)) {
+                throw new Error('未找到备份文件');
+            }
+
+            await fs.copyFileSync(backupPath, mainPath);
+            vscode.window.showInformationMessage('已恢复到备份版本');
         } catch (error) {
-            console.error(error);
+            vscode.window.showErrorMessage(`恢复失败: ${error.message}`);
         }
     });
 
-    context.subscriptions.push(disposable);
+    context.subscriptions.push(patchCommand, restoreCommand);
 }
 
 module.exports = {

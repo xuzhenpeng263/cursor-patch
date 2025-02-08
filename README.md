@@ -1,38 +1,38 @@
 # Cursor Patch
 
-一个用于修改 Cursor 编辑器机器标识的 VS Code 扩展。
+一个用于修补 Cursor 编辑器的 VSCode 扩展。
 
 ## 功能
 
-- 修改 Cursor 的机器标识
-- 支持 Windows/Mac/Linux
-- 自动备份原始文件
+- 修补 Cursor 的机器码获取逻辑
+- 支持自动备份和恢复
+- 提供详细的进度提示
+- 支持自定义路径配置
 
 ## 使用方法
 
-1. 通过命令面板（`Ctrl/Cmd + Shift + P`）
-2. 输入 `Patch Cursor Machine ID`
-3. 执行命令进行补丁
+1. 在 VSCode 中安装此扩展
+2. 使用命令面板（Ctrl+Shift+P 或 Cmd+Shift+P）
+3. 输入 "应用 Cursor 补丁" 或 "恢复 Cursor 备份"
+
+## 配置项
+
+- `cursor-patch.mainJsPath`: 自定义 main.js 文件路径
+- `cursorPatch.storagePath`: 自定义 storage.json 文件路径
+- `cursorPatch.customMachineId`: 自定义 machineId
 
 ## 注意事项
 
-- 请确保有足够的系统权限
-- 建议在操作前备份重要文件
-- 支持 Cursor 0.45.0 及以上版本
-
-## 安装
-
-1. 下载 `.vsix` 文件
-2. 在 Cursor 中，转到扩展视图
-3. 点击 "..." 菜单
-4. 选择 "从 VSIX 安装..."
-5. 选择下载的 `.vsix` 文件
+- 使用前请确保已备份重要文件
+- 仅支持 Cursor 0.45.0 及以上版本
+- 需要管理员权限才能修改系统文件
+- 修补后需要重启 Cursor 才能生效
 
 ## 问题反馈
 
-如果遇到问题，请在 GitHub 仓库提交 issue。
+如有问题请访问 [GitHub Issues](https://github.com/chengazhen/cursor-patch/issues)
 
-## 许可证
+## License
 
 MIT
 
