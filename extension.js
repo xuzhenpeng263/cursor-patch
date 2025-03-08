@@ -19,7 +19,8 @@ function getCursorPaths() {
             // 检查多个可能的路径
             const linuxPaths = [
                 '/opt/Cursor/resources/app',
-                '/usr/share/cursor/resources/app'
+                '/usr/share/cursor/resources/app',
+                '/usr/local/bin/cursor'
             ];
             basePath = linuxPaths.find(p => fs.existsSync(p));
             if (!basePath) {
