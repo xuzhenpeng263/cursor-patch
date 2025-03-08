@@ -26,6 +26,9 @@ function getCursorPaths() {
             if (!basePath) {
                 throw new Error('在 Linux 系统上未找到 Cursor 安装路径');
             }
+            // Linux 下只返回 mainPath，不返回 packagePath
+            mainPath = path.join(basePath, 'out', 'main.js');
+            return { mainPath }; // 只返回 mainPath
             break;
         default:
             throw new Error(`不支持的操作系统: ${platform}`);
@@ -39,7 +42,9 @@ function getCursorPaths() {
 
 // 检查系统要求
 function checkSystemRequirements(packagePath, mainPath) {
-    const files = [packagePath, mainPath];
+    // 对于 Linux，只检查 mainPath
+    const platform = os.platform();
+    const files = platform === 'linux' ? [mainPath] : [packagePath, mainPath];
     
     for (const file of files) {
         if (!fs.existsSync(file)) {
@@ -132,9 +137,20 @@ async function patchCursorGetMachineId() {
         const customPath = config.get('mainJsPath');
         
         // 获取路径
-        const { packagePath, mainPath } = customPath ? 
-            { packagePath: path.join(path.dirname(customPath), '..', 'package.json'), mainPath: customPath } :
-            getCursorPaths();
+        const platform = os.platform();
+        let packagePath, mainPath;
+        
+        if (customPath) {
+            mainPath = customPath;
+            // 只在非 Linux 平台上设置 packagePath
+            if (platform !== 'linux') {
+                packagePath = path.join(path.dirname(customPath), '..', 'package.json');
+            }
+        } else {
+            const paths = getCursorPaths();
+            mainPath = paths.mainPath;
+            packagePath = paths.packagePath; // Linux 下这个值是 undefined
+        }
 
         // 显示进度
         await vscode.window.withProgress({
@@ -145,10 +161,15 @@ async function patchCursorGetMachineId() {
             progress.report({ increment: 0, message: "检查系统要求..." });
             await checkSystemRequirements(packagePath, mainPath);
 
-            progress.report({ increment: 30, message: "检查版本兼容性..." });
-            const packageJson = JSON.parse(fs.readFileSync(packagePath, 'utf8'));
-            const version = packageJson.version;
-            await checkVersion(version, '0.45.0');
+            // 只在非 Linux 平台上检查版本
+            if (platform !== 'linux') {
+                progress.report({ increment: 30, message: "检查版本兼容性..." });
+                const packageJson = JSON.parse(fs.readFileSync(packagePath, 'utf8'));
+                const version = packageJson.version;
+                await checkVersion(version, '0.45.0');
+            } else {
+                progress.report({ increment: 30, message: "跳过版本检查（Linux 平台）..." });
+            }
 
             progress.report({ increment: 30, message: "修改文件..." });
             await modifyMainJs(mainPath);
